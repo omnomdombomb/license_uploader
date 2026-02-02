@@ -1,0 +1,77 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║              📚 WHICH FILE SHOULD YOU READ?                       ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+
+🎯 I JUST WANT TO USE IT
+═══════════════════════════════════════════════════════════════════
+
+  1. Read: GET_STARTED.md (5 minutes)
+  
+  2. Double-click: START_HERE.bat (Windows)
+                or START_HERE.sh (Mac/Linux)
+  
+  3. Done! Browser opens automatically
+
+
+📖 I WANT DETAILED INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════
+
+  Read in this order:
+  
+  1. GET_STARTED.md      → Quick setup (5 min)
+  2. USER_GUIDE.md       → Complete guide (15 min)
+  3. INSTALLATION_GUIDE.md → If you have installation issues
+
+
+🔧 I'M AN ADMINISTRATOR SETTING THIS UP
+═══════════════════════════════════════════════════════════════════
+
+  Read in this order:
+  
+  1. README.md                → Overview
+  2. INSTALLATION_GUIDE.md    → Installation details
+  3. docs/PRODUCTION_READINESS_REPORT.md → Production setup
+  4. docs/PRODUCTION_SECURITY_AUDIT.md   → Security review
+
+
+💻 I'M A DEVELOPER
+═══════════════════════════════════════════════════════════════════
+
+  Read in this order:
+  
+  1. README.md                → Overview
+  2. INSTALLATION_GUIDE.md    → Dev environment setup
+  3. docs/BUILD_INSTRUCTIONS.md → Build executables
+  4. docs/ folder             → All technical docs
+
+
+🐛 I'M HAVING PROBLEMS
+═══════════════════════════════════════════════════════════════════
+
+  Check these in order:
+  
+  1. GET_STARTED.md "Troubleshooting" section
+  2. USER_GUIDE.md "Common Issues" section
+  3. INSTALLATION_GUIDE.md if installation failed
+
+
+🚀 I WANT THE PRE-BUILT EXECUTABLE
+═══════════════════════════════════════════════════════════════════
+
+  Read: docs/RUN_EXECUTABLE.md
+
+
+═══════════════════════════════════════════════════════════════════
+
+QUICK SUMMARY:
+  
+  📗 GET_STARTED.md    → Everyone starts here
+  📘 USER_GUIDE.md     → Detailed usage
+  📙 INSTALLATION_GUIDE.md → Setup help
+  📕 README.md         → Project overview
+  📁 docs/             → Technical stuff
+
+═══════════════════════════════════════════════════════════════════

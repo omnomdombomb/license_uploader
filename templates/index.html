@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Upload License Document{% endblock %}
+
+{% block content %}
+<div class="upload-section">
+    <h2>Upload License Document</h2>
+    <p class="subtitle">Upload a vendor license agreement to extract terms automatically</p>
+
+    <div class="upload-card">
+        <div id="drop-zone" class="drop-zone">
+            <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="drop-text">Drag and drop your license document here</p>
+            <p class="drop-text-or">or</p>
+            <label for="file-input" class="btn btn-primary">Choose File</label>
+            <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt" hidden>
+            <p class="file-types">Supported: PDF, DOC, DOCX, TXT (Max 16MB)</p>
+        </div>
+
+        <div id="file-info" class="file-info" style="display: none;">
+            <p><strong>Selected file:</strong> <span id="file-name"></span></p>
+            <button id="upload-btn" class="btn btn-success">Process Document</button>
+        </div>
+
+        <div id="processing" class="processing" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing document and extracting terms...</p>
+        </div>
+
+        <div id="error-msg" class="error-msg" style="display: none;"></div>
+    </div>
+</div>
+
+<div class="features">
+    <h3>How it works</h3>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-number">1</div>
+            <h4>Upload</h4>
+            <p>Upload your vendor license agreement in PDF, DOC, or TXT format</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-number">2</div>
+            <h4>Extract</h4>
+            <p>AI analyzes the document and extracts all relevant license terms</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-number">3</div>
+            <h4>Review</h4>
+            <p>Review and edit the extracted terms in an intuitive interface</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-number">4</div>
+            <h4>Upload</h4>
+            <p>Submit the validated license directly to Alma/PrimoVE</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const uploadBtn = document.getElementById('upload-btn');
+    const processing = document.getElementById('processing');
+    const errorMsg = document.getElementById('error-msg');
+
+    let selectedFile = null;
+
+    // Drag and drop handlers
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    dropZone.addEventListener('drop', handleDrop);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            selectedFile = files[0];
+            fileName.textContent = selectedFile.name;
+            fileInfo.style.display = 'block';
+            errorMsg.style.display = 'none';
+        }
+    }
+
+    uploadBtn.addEventListener('click', uploadFile);
+
+    async function uploadFile() {
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        fileInfo.style.display = 'none';
+        processing.style.display = 'block';
+        errorMsg.style.display = 'none';
+
+        try {
+            // Get CSRF token
+            const csrfResponse = await fetch('/api/csrf-token', {
+                credentials: 'same-origin'
+            });
+            const csrfData = await csrfResponse.json();
+
+            // Upload file with CSRF token
+            const response = await fetch('/upload', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfData.csrf_token
+                },
+                credentials: 'same-origin',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (error) {
+            processing.style.display = 'none';
+            fileInfo.style.display = 'block';
+            errorMsg.textContent = error.message;
+            errorMsg.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

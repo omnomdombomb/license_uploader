@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Review License Terms{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="review-section">
+    <h2>Review and Edit License Terms</h2>
+    <p class="subtitle">Document: <strong>{{ filename }}</strong></p>
+
+    <div class="progress-indicator">
+        <div class="progress-step completed">
+            <div class="step-number">1</div>
+            <div class="step-label">Upload</div>
+        </div>
+        <div class="progress-line completed"></div>
+        <div class="progress-step active">
+            <div class="step-number">2</div>
+            <div class="step-label">Review</div>
+        </div>
+        <div class="progress-line"></div>
+        <div class="progress-step">
+            <div class="step-number">3</div>
+            <div class="step-label">Submit</div>
+        </div>
+    </div>
+
+    <!-- Basic License Information -->
+    <div class="form-section">
+        <h3>Basic Information</h3>
+        <div class="form-grid">
+            <div class="form-group required">
+                <label for="license-code">License Code *</label>
+                <input type="text" id="license-code" placeholder="e.g., LIC2026001" required>
+                <span class="help-text">Unique identifier for this license</span>
+            </div>
+
+            <div class="form-group required">
+                <label for="license-name">License Name *</label>
+                <input type="text" id="license-name" placeholder="e.g., Springer eBooks 2026" required>
+                <span class="help-text">Descriptive name for the license</span>
+            </div>
+
+            <div class="form-group required">
+                <label for="license-type">Type *</label>
+                <select id="license-type" required>
+                    <option value="LICENSE">License</option>
+                    <option value="NEGOTIATION">Negotiation</option>
+                    <option value="ADDENDUM">Addendum</option>
+                </select>
+            </div>
+
+            <div class="form-group required">
+                <label for="license-status">Status *</label>
+                <select id="license-status" required>
+                    <option value="ACTIVE">Active</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="EXPIRED">Expired</option>
+                    <option value="RETIRED">Retired</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="review-status">Review Status</label>
+                <select id="review-status">
+                    <option value="INREVIEW">In Review</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="ACCEPTED">Accepted</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="vendor">Vendor</label>
+                <select id="vendor">
+                    <option value="">-- Select Vendor --</option>
+                    {% for vendor in vendors %}
+                    <option value="{{ vendor.code }}">{{ vendor.name }} ({{ vendor.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="start-date">Start Date</label>
+                <input type="text" id="start-date" class="date-picker" placeholder="YYYY-MM-DD">
+            </div>
+
+            <div class="form-group">
+                <label for="end-date">End Date</label>
+                <input type="text" id="end-date" class="date-picker" placeholder="YYYY-MM-DD">
+            </div>
+        </div>
+    </div>
+
+    <!-- License Terms -->
+    <div class="form-section">
+        <h3>License Terms</h3>
+        <div class="filter-bar">
+            <input type="text" id="term-search" placeholder="Search terms..." class="search-input">
+            <select id="term-filter" class="filter-select">
+                <option value="all">All Terms</option>
+                <option value="extracted">With Values</option>
+                <option value="empty">Without Values</option>
+                <option value="yes-no">Yes/No Terms</option>
+                <option value="permitted-prohibited">Permitted/Prohibited Terms</option>
+            </select>
+        </div>
+
+        <div id="terms-container" class="terms-container">
+            {% for code, term in extracted_terms.items() %}
+            <div class="term-card"
+                 data-code="{{ code }}"
+                 data-type="{{ term.type }}"
+                 data-has-value="{{ 'true' if term.value else 'false' }}">
+                 {# FEATURE DISABLED: Citation and source location tracking
+                 data-citation="{{ term.citation if term.citation else '' }}"
+                 data-source-location="{{ term.source_location | tojson if term.source_location else '' }}" #}
+                <div class="term-header">
+                    <h4>{{ term.name }}</h4>
+                    <span class="term-code">{{ code }}</span>
+                </div>
+                <p class="term-description">{{ term.description }}</p>
+
+                <div class="term-input-group">
+                    {% if term.type == 'FREE-TEXT' %}
+                        <textarea
+                            id="term-{{ code }}"
+                            class="term-input"
+                            rows="3"
+                            placeholder="Enter value or leave blank">{{ term.value if term.value else '' }}</textarea>
+
+                    {% elif term.type == 'LicenseTermsYesNo' %}
+                        <select id="term-{{ code }}" class="term-input">
+                            <option value="">-- Not Specified --</option>
+                            <option value="Yes" {{ 'selected' if term.value == 'Yes' else '' }}>Yes</option>
+                            <option value="No" {{ 'selected' if term.value == 'No' else '' }}>No</option>
+                        </select>
+
+                    {% elif term.type == 'LicenseTermsPermittedProhibited' %}
+                        <select id="term-{{ code }}" class="term-input">
+                            <option value="">-- Not Specified --</option>
+                            <option value="Permitted" {{ 'selected' if term.value == 'Permitted' else '' }}>Permitted</option>
+                            <option value="Permitted (Explicit)" {{ 'selected' if term.value == 'Permitted (Explicit)' else '' }}>Permitted (Explicit)</option>
+                            <option value="Permitted (Interpreted)" {{ 'selected' if term.value == 'Permitted (Interpreted)' else '' }}>Permitted (Interpreted)</option>
+                            <option value="Prohibited" {{ 'selected' if term.value == 'Prohibited' else '' }}>Prohibited</option>
+                            <option value="Prohibited (Explicit)" {{ 'selected' if term.value == 'Prohibited (Explicit)' else '' }}>Prohibited (Explicit)</option>
+                            <option value="Prohibited (Interpreted)" {{ 'selected' if term.value == 'Prohibited (Interpreted)' else '' }}>Prohibited (Interpreted)</option>
+                            <option value="Silent" {{ 'selected' if term.value == 'Silent' else '' }}>Silent</option>
+                            <option value="Silent (Uninterpreted)" {{ 'selected' if term.value == 'Silent (Uninterpreted)' else '' }}>Silent (Uninterpreted)</option>
+                            <option value="Not Applicable" {{ 'selected' if term.value == 'Not Applicable' else '' }}>Not Applicable</option>
+                            <option value="Uninterpreted" {{ 'selected' if term.value == 'Uninterpreted' else '' }}>Uninterpreted</option>
+                        </select>
+
+                    {% elif term.type == 'LicenseTermsRenewalType' %}
+                        <select id="term-{{ code }}" class="term-input">
+                            <option value="">-- Not Specified --</option>
+                            <option value="Explicit" {{ 'selected' if term.value == 'Explicit' else '' }}>Explicit</option>
+                            <option value="Automatic" {{ 'selected' if term.value == 'Automatic' else '' }}>Automatic</option>
+                        </select>
+
+                    {% elif term.type == 'LicenseTermsUOM' %}
+                        <select id="term-{{ code }}" class="term-input">
+                            <option value="">-- Not Specified --</option>
+                            <option value="Week" {{ 'selected' if term.value == 'Week' else '' }}>Week</option>
+                            <option value="Calendar Day" {{ 'selected' if term.value == 'Calendar Day' else '' }}>Calendar Day</option>
+                            <option value="Month" {{ 'selected' if term.value == 'Month' else '' }}>Month</option>
+                            <option value="Business Day" {{ 'selected' if term.value == 'Business Day' else '' }}>Business Day</option>
+                        </select>
+                    {% endif %}
+
+                    <button class="btn-refine" data-code="{{ code }}" title="Refine with AI">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </button>
+
+                    {# FEATURE DISABLED: Show Source button
+                    {% if term.citation or term.source_location %}
+                    <button class="btn-show-source" data-code="{{ code }}" title="Show Source">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                    </button>
+                    {% endif %}
+                    #}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button id="cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="validate-btn" class="btn btn-primary">Validate</button>
+        <button id="submit-btn" class="btn btn-success">Submit to Alma</button>
+    </div>
+
+    <div id="status-msg" class="status-msg" style="display: none;"></div>
+</div>
+
+<!-- FEATURE DISABLED: Source Citation Modal
+<div id="source-modal" class="modal" style="display: none;">
+    <div class="modal-content source-modal-content">
+        <div class="modal-header">
+            <h3 id="source-modal-title">Source Citation</h3>
+            <button class="modal-close" onclick="document.getElementById('source-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="source-page-info" class="source-meta"></div>
+            <div id="source-citation-text" class="source-citation">
+                <span id="source-context-before" class="context-text"></span>
+                <mark id="source-matched-text" class="matched-text"></mark>
+                <span id="source-context-after" class="context-text"></span>
+            </div>
+            <div id="source-confidence-info" class="confidence-info" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+-->
+
+<!-- Loading Modal -->
+<div id="loading-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="spinner"></div>
+        <p id="loading-text">Processing...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="{{ url_for('static', filename='js/review.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=License Uploader
+Comment=AI-powered license term extraction and upload
+Exec=/home/hunk/projects/license_uploader/venv/bin/python /home/hunk/projects/license_uploader/start_license_uploader_gui.py
+Path=/home/hunk/projects/license_uploader
+Icon=/home/hunk/projects/license_uploader/static/favicon.ico
+Terminal=false
+Categories=Office;Education;
+Keywords=license;library;alma;document;

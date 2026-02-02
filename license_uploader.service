@@ -1,0 +1,35 @@
+[Unit]
+Description=License Uploader Gunicorn Application
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+RuntimeDirectory=gunicorn
+WorkingDirectory=/var/www/license_uploader
+Environment="PATH=/var/www/license_uploader/venv/bin"
+ExecStart=/var/www/license_uploader/venv/bin/gunicorn \
+    --config /var/www/license_uploader/gunicorn.conf.py \
+    app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+# Security hardening
+NoNewPrivileges=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/license_uploader/logs /var/www/license_uploader/uploads /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+# Restart policy
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

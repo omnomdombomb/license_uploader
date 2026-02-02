@@ -1,0 +1,65 @@
+# Environment variables (contains sensitive API keys)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+/tmp/
+license_upload_*.pkl
+license_upload_*.json
+
+# Custom prompt
+custom_prompt.txt
+
+# Uploads
+uploads/
+!uploads/.gitkeep
+
+# Agent workspace
+agent_workspace/
+agent_archive/
+dev_artifacts/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

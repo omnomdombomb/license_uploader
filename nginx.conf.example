@@ -1,0 +1,100 @@
+# Nginx configuration for License Uploader
+# Place this in /etc/nginx/sites-available/license-uploader
+# Create symlink: ln -s /etc/nginx/sites-available/license-uploader /etc/nginx/sites-enabled/
+
+upstream license_uploader_app {
+    # Gunicorn socket
+    server 127.0.0.1:8000 fail_timeout=0;
+}
+
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com www.your-domain.com;
+
+    # SSL Configuration
+    ssl_certificate /path/to/ssl/cert.pem;
+    ssl_certificate_key /path/to/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    # Security Headers (additional to Flask-Talisman)
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Application root
+    root /var/www/license_uploader;
+
+    # Max upload size (should match Flask MAX_CONTENT_LENGTH)
+    client_max_body_size 16M;
+
+    # Timeouts
+    proxy_connect_timeout 300s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 300s;
+    send_timeout 300s;
+
+    # Logging
+    access_log /var/log/nginx/license_uploader_access.log;
+    error_log /var/log/nginx/license_uploader_error.log;
+
+    # Static files
+    location /static/ {
+        alias /var/www/license_uploader/static/;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Health check endpoint (add this to your Flask app)
+    location /health {
+        proxy_pass http://license_uploader_app;
+        access_log off;
+    }
+
+    # Main application
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+
+        # Proxy to Gunicorn
+        proxy_pass http://license_uploader_app;
+
+        # WebSocket support (if needed in future)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # Rate limiting (additional to Flask-Limiter)
+    limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+    limit_req zone=general burst=20 nodelay;
+
+    # Deny access to sensitive files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    location ~ ~$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}
