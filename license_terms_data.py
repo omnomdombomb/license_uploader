@@ -340,7 +340,7 @@ LICENSE_TERMS = [
         "type": "LicenseTermsUOM"
     },
     {
-        "code": "LEETERMCON",
+        "code": "LEETERMCOND",
         "name": "Licensor Termination Condition",
         "description": "The conditions that would allow a Licensor to terminate an acquisition during a contract period.",
         "type": "FREE-TEXT"
@@ -439,7 +439,7 @@ LICENSE_TERMS = [
         "code": "REMOTE",
         "name": "Remote Access",
         "description": "The right of an authorized user to gain access to an Electronic Product from an off-site location.",
-        "type": "LicenseTermsPermittedProhibited"
+        "type": "LicenseTermsYesNo"
     },
     {
         "code": "RENEWTYPE",

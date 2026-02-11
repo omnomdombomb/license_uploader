@@ -253,6 +253,12 @@ class AlmaAPI:
                             if isinstance(value, str):
                                 value = value.replace(' ', '').upper()
 
+                        # For Renewal Type terms, convert to uppercase
+                        # e.g., "Explicit" -> "EXPLICIT", "Automatic" -> "AUTOMATIC"
+                        elif term_type == 'LicenseTermsRenewalType':
+                            if isinstance(value, str):
+                                value = value.upper()
+
                         terms.append({
                             'code': {'value': code},
                             'value': {'value': value}

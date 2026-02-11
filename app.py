@@ -682,6 +682,7 @@ def submit_license():
         })
 
     except Exception as e:
+        app.logger.error(f"Error submitting license: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
