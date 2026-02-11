@@ -49,7 +49,7 @@ pip install -r requirements.txt
 
 **Alternative (command line):**
 ```bash
-python start_license_uploader_gui.py
+python launcher.py
 ```
 
 Your browser will open automatically to http://localhost:5000

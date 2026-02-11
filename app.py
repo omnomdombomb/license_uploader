@@ -601,6 +601,9 @@ def submit_license():
         if 'name' not in basic_info or not basic_info['name']:
             return jsonify({'error': 'License name is required'}), 400
 
+        if 'start_date' not in basic_info or not basic_info['start_date']:
+            return jsonify({'error': 'Start date is required'}), 400
+
         # Sanitize all text fields
         basic_info['code'] = sanitize_license_field(basic_info.get('code'), max_length=50)
         basic_info['name'] = sanitize_license_field(basic_info.get('name'), max_length=255)
@@ -608,37 +611,49 @@ def submit_license():
         if 'vendor_code' in basic_info:
             basic_info['vendor_code'] = sanitize_license_field(basic_info['vendor_code'], max_length=50)
 
-        # Validate dates if present
+        # Validate dates
         start_date = basic_info.get('start_date')
         end_date = basic_info.get('end_date')
 
-        if start_date or end_date:
-            try:
-                # Parse dates (expected format: YYYY-MM-DD or ISO format)
-                if start_date:
-                    start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-                    basic_info['start_date'] = start_dt.strftime('%Y-%m-%d')
+        try:
+            # Parse start date (required)
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            basic_info['start_date'] = start_dt.strftime('%Y-%m-%d')
 
-                if end_date:
-                    end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-                    basic_info['end_date'] = end_dt.strftime('%Y-%m-%d')
+            # Parse end date if present
+            if end_date:
+                end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                basic_info['end_date'] = end_dt.strftime('%Y-%m-%d')
 
                 # Validate that end_date is after start_date
-                if start_date and end_date:
-                    if end_dt <= start_dt:
-                        return jsonify({'error': 'End date must be after start date'}), 400
+                if end_dt <= start_dt:
+                    return jsonify({'error': 'End date must be after start date'}), 400
 
-            except (ValueError, AttributeError) as e:
-                return jsonify({'error': f'Invalid date format. Please use YYYY-MM-DD format.'}), 400
+        except (ValueError, AttributeError) as e:
+            return jsonify({'error': f'Invalid date format. Please use YYYY-MM-DD format.'}), 400
 
         # Build license payload
         alma = AlmaAPI(api_key=alma_api_key if alma_api_key else None)
         app.logger.info(f"Submitting license with info: {json.dumps(basic_info, indent=2)}")
 
+        # DEBUG: Log received terms data
+        terms_data = data.get('terms')
+        app.logger.debug("="*80)
+        app.logger.debug("Received terms data from request:")
+        app.logger.debug(json.dumps(terms_data, indent=2))
+        app.logger.debug("="*80)
+
         license_payload = alma.build_license_payload(
             basic_info=basic_info,
-            extracted_terms=data.get('terms')
+            extracted_terms=terms_data
         )
+
+        # DEBUG: Log the final Alma API license payload
+        app.logger.debug("="*80)
+        app.logger.debug("Final Alma API License Payload Being Sent:")
+        app.logger.debug(json.dumps(license_payload, indent=2))
+        app.logger.debug("="*80)
+
         app.logger.debug(f"License payload: {json.dumps(license_payload, indent=2)}")
 
         # Create license in Alma

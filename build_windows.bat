@@ -1,26 +1,46 @@
 @echo off
 REM Build script for Windows - Creates standalone executable
 
+title License Uploader - Build Process
+
 echo ====================================
 echo License Uploader - Windows Build
 echo ====================================
 echo.
 
-REM Check if Python is installed
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ERROR: Python is not installed or not in PATH
-    echo Please install Python from https://www.python.org/
-    pause
-    exit /b 1
+REM Detect Python
+set PYTHON_CMD=
+for %%P in (python py python3) do (
+    %%P --version >nul 2>&1
+    if !errorlevel! equ 0 (
+        set PYTHON_CMD=%%P
+        goto :python_found
+    )
 )
+
+echo ERROR: Python is not installed or not in PATH
+echo.
+echo Please install Python 3.11+ from https://www.python.org/
+echo.
+echo Make sure to check "Add Python to PATH" during installation.
+pause
+exit /b 1
+
+:python_found
+echo Using Python command: %PYTHON_CMD%
+%PYTHON_CMD% --version
+echo.
 
 REM Check if virtual environment exists
 if not exist "venv\" (
     echo Creating virtual environment...
-    python -m venv venv
+    %PYTHON_CMD% -m venv venv
     if %errorlevel% neq 0 (
         echo ERROR: Failed to create virtual environment
+        echo.
+        echo Troubleshooting:
+        echo   1. Run: DIAGNOSE_WINDOWS.bat
+        echo   2. Check if venv module is available
         pause
         exit /b 1
     )

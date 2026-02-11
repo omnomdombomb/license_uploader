@@ -376,6 +376,15 @@ const ReviewPage = {
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
 
+        if (!startDate) {
+            Utils.showMessage(
+                statusMsg,
+                'Start date is required',
+                'error'
+            );
+            return false;
+        }
+
         if (startDate && endDate) {
             const start = new Date(startDate);
             const end = new Date(endDate);

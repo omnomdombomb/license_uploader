@@ -3,8 +3,11 @@ Alma API integration for license management
 """
 import requests
 import json
+import logging
 from datetime import datetime
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class AlmaAPI:
@@ -42,35 +45,48 @@ class AlmaAPI:
         Retrieve list of vendors from Alma
 
         Args:
-            limit: Number of results to return
-            offset: Offset for pagination
+            limit: Number of results per API call (max 100)
+            offset: Starting offset for pagination
 
         Returns:
-            List of vendors with codes and names
+            List of all vendors with codes and names
         """
         url = f"{self.base_url}/almaws/v1/acq/vendors"
-        params = {
-            'limit': limit,
-            'offset': offset,
-            'status': 'active'
-        }
+        all_vendors = []
+        current_offset = offset
 
         try:
-            response = requests.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
+            while True:
+                params = {
+                    'limit': limit,
+                    'offset': current_offset,
+                    'status': 'active'
+                }
 
-            data = response.json()
-            vendors = []
+                response = requests.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
 
-            if 'vendor' in data:
-                for vendor in data['vendor']:
-                    vendors.append({
-                        'code': vendor.get('code'),
-                        'name': vendor.get('name'),
-                        'status': vendor.get('status', {}).get('value')
-                    })
+                data = response.json()
 
-            return vendors
+                if 'vendor' in data and len(data['vendor']) > 0:
+                    for vendor in data['vendor']:
+                        all_vendors.append({
+                            'code': vendor.get('code'),
+                            'name': vendor.get('name'),
+                            'status': vendor.get('status', {}).get('value')
+                        })
+
+                    # If we got fewer results than the limit, we've reached the end
+                    if len(data['vendor']) < limit:
+                        break
+
+                    # Otherwise, increment offset and continue
+                    current_offset += limit
+                else:
+                    # No vendors in response, we're done
+                    break
+
+            return all_vendors
 
         except requests.exceptions.RequestException as e:
             raise Exception(f"Error fetching vendors from Alma: {str(e)}")
@@ -111,14 +127,37 @@ class AlmaAPI:
             # Validate required fields
             self._validate_license_data(license_data)
 
+            logger.debug("="*80)
+            logger.debug("Sending POST request to Alma API:")
+            logger.debug(f"URL: {url}")
+            logger.debug("="*80)
+
             response = requests.post(
                 url,
                 headers=self.headers,
                 json=license_data
             )
+
+            logger.debug("="*80)
+            logger.debug(f"Alma API Response Status: {response.status_code}")
+            logger.debug(f"Alma API Response Headers: {dict(response.headers)}")
+            logger.debug("Alma API Response Body:")
+            logger.debug(response.text)
+            logger.debug("="*80)
+
             response.raise_for_status()
 
-            return response.json()
+            result = response.json()
+
+            # Check if terms were saved in the response
+            if 'term' in result and len(result['term']) > 0:
+                logger.debug(f"✅ SUCCESS! Response contains {len(result['term'])} terms")
+            elif 'term' in result:
+                logger.debug(f"⚠️  WARNING - Response has 'term' field but it's empty: {result['term']}")
+            else:
+                logger.debug("❌ ERROR - Response does NOT contain 'term' field!")
+
+            return result
 
         except requests.exceptions.RequestException as e:
             error_msg = f"Error creating license: {str(e)}"
@@ -181,12 +220,50 @@ class AlmaAPI:
         """
         # Build terms array
         terms = []
-        for code, term_data in extracted_terms.items():
-            if term_data['value'] is not None:
-                terms.append({
-                    'code': code,
-                    'value': term_data['value']
-                })
+
+        # Handle None or non-dict extracted_terms
+        if extracted_terms and isinstance(extracted_terms, dict):
+            for code, term_data in extracted_terms.items():
+                # Ensure term_data is a dict with 'value' key
+                if isinstance(term_data, dict) and 'value' in term_data:
+                    if term_data['value'] is not None and term_data['value'] != '':
+                        # Normalize value based on term type
+                        value = term_data['value']
+                        term_type = term_data.get('type', '')
+
+                        # For Yes/No terms, convert to uppercase YES/NO
+                        if term_type == 'LicenseTermsYesNo':
+                            if isinstance(value, str):
+                                value_lower = value.lower()
+                                if value_lower == 'yes':
+                                    value = 'YES'
+                                elif value_lower == 'no':
+                                    value = 'NO'
+
+                        # For Permitted/Prohibited terms, normalize format
+                        # e.g., "Permitted (Explicit)" -> "PERMITTED_EXPLICIT"
+                        elif term_type == 'LicenseTermsPermittedProhibited':
+                            if isinstance(value, str):
+                                # Remove parentheses, replace spaces with underscores, uppercase
+                                value = value.replace('(', '').replace(')', '').replace(' ', '_').upper()
+
+                        # For Unit of Measure terms, remove spaces and uppercase
+                        # e.g., "Calendar Day" -> "CALENDARDAY"
+                        elif term_type == 'LicenseTermsUOM':
+                            if isinstance(value, str):
+                                value = value.replace(' ', '').upper()
+
+                        terms.append({
+                            'code': {'value': code},
+                            'value': {'value': value}
+                        })
+                        logger.debug(f"Adding term {code} = {value} (type: {term_type})")
+                    else:
+                        logger.debug(f"Skipping term {code} - value is None or empty")
+                else:
+                    logger.debug(f"Skipping term {code} - invalid structure: {term_data}")
+        else:
+            logger.debug(f"extracted_terms is None or not a dict: {type(extracted_terms)}")
 
         # Build license object
         license_obj = {
@@ -215,8 +292,12 @@ class AlmaAPI:
                 'value': basic_info['vendor_code']
             }
 
+        # Add terms directly to the license object (not nested in 'terms')
         if terms:
-            license_obj['terms'] = {'term': terms}
+            license_obj['term'] = terms
+            logger.debug(f"Added {len(terms)} terms to license payload")
+        else:
+            logger.debug("No terms added to license payload - terms list is empty")
 
         return license_obj
 

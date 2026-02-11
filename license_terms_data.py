@@ -37,7 +37,7 @@ LICENSE_TERMS = [
         "code": "ARCHIVE",
         "name": "Archiving Right",
         "description": "The right to permanently retain an electronic copy of the licensed materials.",
-        "type": "LicenseTermsPermittedProhibited"
+        "type": "LicenseTermsYesNo"
     },
     {
         "code": "AUTHUSERDEF",
@@ -415,7 +415,7 @@ LICENSE_TERMS = [
         "code": "PERPETUAL",
         "name": "Perpetual Access Right",
         "description": "The right to permanently access the licensed materials paid for during the period of the license agreement.",
-        "type": "LicenseTermsPermittedProhibited"
+        "type": "LicenseTermsYesNo"
     },
     {
         "code": "PCONCURUSER",
