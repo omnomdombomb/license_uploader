@@ -17,6 +17,9 @@ class LLMExtractor:
     # Path to custom prompt file
     CUSTOM_PROMPT_FILE = 'custom_prompt.txt'
 
+    # Path to custom term descriptions file
+    CUSTOM_DESCRIPTIONS_FILE = 'custom_term_descriptions.json'
+
     def __init__(self, api_key=None, base_url=None, model=None):
         """Initialize OpenAI client with LiteLLM proxy
 
@@ -141,6 +144,43 @@ Example:
 
 Return ONLY valid JSON, no additional text."""
 
+    @staticmethod
+    def load_custom_descriptions():
+        """Load custom term descriptions from JSON file.
+        Returns dict of {term_code: custom_description} or empty dict."""
+        desc_file = Path(LLMExtractor.CUSTOM_DESCRIPTIONS_FILE)
+        if desc_file.exists():
+            try:
+                with open(desc_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data if isinstance(data, dict) else {}
+            except Exception:
+                return {}
+        return {}
+
+    @staticmethod
+    def save_custom_descriptions(descriptions):
+        """Save custom term descriptions to JSON file."""
+        with open(LLMExtractor.CUSTOM_DESCRIPTIONS_FILE, 'w', encoding='utf-8', newline='\n') as f:
+            json.dump(descriptions, f, indent=2, ensure_ascii=False)
+
+    @staticmethod
+    def get_effective_descriptions():
+        """Return all term descriptions, merging defaults with custom overrides."""
+        custom = LLMExtractor.load_custom_descriptions()
+        result = []
+        for term in LICENSE_TERMS:
+            is_custom = term['code'] in custom
+            result.append({
+                'code': term['code'],
+                'name': term['name'],
+                'description': custom.get(term['code'], term['description']),
+                'default_description': term['description'],
+                'type': term['type'],
+                'is_custom': is_custom
+            })
+        return result
+
     def extract_license_terms(self, document_text, document_parser=None):
         """
         Extract license terms from document text
@@ -203,10 +243,14 @@ Return ONLY valid JSON, no additional text."""
     def _create_extraction_prompt(self, document_text):
         """Create detailed extraction prompt using custom template if available"""
 
+        # Load custom descriptions (if any)
+        custom_descriptions = self.load_custom_descriptions()
+
         # Build term descriptions
         terms_description = []
         for term in LICENSE_TERMS:
-            term_info = f"- {term['code']}: {term['name']} - {term['description']}"
+            description = custom_descriptions.get(term['code'], term['description'])
+            term_info = f"- {term['code']}: {term['name']} - {description}"
             if term['type'] != 'FREE-TEXT':
                 values = TERM_TYPE_VALUES.get(term['type'], [])
                 term_info += f" (Valid values: {', '.join(values)})"
@@ -372,10 +416,14 @@ Return ONLY valid JSON, no additional text."""
         if not term:
             return current_value
 
+        # Use custom description if available
+        custom_descriptions = self.load_custom_descriptions()
+        description = custom_descriptions.get(term_code, term['description'])
+
         prompt = f"""Focus on extracting this specific license term from the document:
 
 TERM: {term['name']} ({term['code']})
-DESCRIPTION: {term['description']}
+DESCRIPTION: {description}
 CURRENT VALUE: {current_value if current_value else 'Not extracted'}
 
 """

@@ -44,16 +44,21 @@ temp/
 license_upload_*.pkl
 license_upload_*.json
 
-# Custom prompt
+# Custom prompt and term descriptions
 custom_prompt.txt
+custom_term_descriptions.json
 
 # Uploads
 uploads/
 !uploads/.gitkeep
 
-# Agent workspace
+# Example documents (sensitive institutional data)
+examples/
+
+# Agent workspace and research
 agent_workspace/
 agent_archive/
+agent-orchestration/
 dev_artifacts/
 
 # Logs

@@ -331,6 +331,35 @@ const API = {
         return await this.request('/api/prompt', {
             method: 'DELETE'
         });
+    },
+
+    /**
+     * Get all term descriptions (with custom overrides)
+     */
+    async getTermDescriptions() {
+        return await this.request('/api/term-descriptions', {
+            method: 'GET'
+        });
+    },
+
+    /**
+     * Update custom term descriptions
+     */
+    async updateTermDescriptions(descriptions) {
+        return await this.request('/api/term-descriptions', {
+            method: 'POST',
+            body: JSON.stringify({ descriptions: descriptions })
+        });
+    },
+
+    /**
+     * Reset term descriptions (all or specific codes)
+     */
+    async resetTermDescriptions(codes = null) {
+        return await this.request('/api/term-descriptions', {
+            method: 'DELETE',
+            body: JSON.stringify(codes ? { codes: codes } : {})
+        });
     }
 };
 
@@ -449,6 +478,227 @@ const PromptEditor = {
     }
 };
 
+// Term Description Editor
+const TermDescriptionEditor = {
+    descriptions: [],
+
+    init() {
+        const editBtn = document.getElementById('edit-descriptions-btn');
+        const modal = document.getElementById('term-descriptions-modal');
+
+        if (!editBtn || !modal) return;
+
+        editBtn.addEventListener('click', () => this.openModal());
+
+        document.getElementById('close-descriptions-modal').addEventListener('click', () => this.closeModal());
+        document.getElementById('cancel-descriptions-btn').addEventListener('click', () => this.closeModal());
+        document.getElementById('save-descriptions-btn').addEventListener('click', () => this.saveChanges());
+        document.getElementById('reset-all-descriptions-btn').addEventListener('click', () => this.resetAll());
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.closeModal();
+        });
+
+        // Search/filter
+        const searchInput = document.getElementById('desc-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', Utils.debounce(() => {
+                this.filterDescriptions(searchInput.value.toLowerCase());
+            }, 200));
+        }
+
+        const filterSelect = document.getElementById('desc-filter');
+        if (filterSelect) {
+            filterSelect.addEventListener('change', () => {
+                this.filterDescriptions(
+                    document.getElementById('desc-search')?.value?.toLowerCase() || ''
+                );
+            });
+        }
+    },
+
+    async openModal() {
+        try {
+            Utils.showLoading('Loading term descriptions...');
+            const result = await API.getTermDescriptions();
+            Utils.hideLoading();
+
+            if (result.success) {
+                this.descriptions = result.descriptions;
+                this.renderDescriptions();
+                document.getElementById('term-descriptions-modal').style.display = 'flex';
+            }
+        } catch (error) {
+            Utils.hideLoading();
+            alert('Error loading descriptions: ' + error.message);
+        }
+    },
+
+    closeModal() {
+        document.getElementById('term-descriptions-modal').style.display = 'none';
+    },
+
+    renderDescriptions() {
+        const container = document.getElementById('desc-list-container');
+        container.innerHTML = '';
+
+        const customCount = this.descriptions.filter(d => d.is_custom).length;
+        const countEl = document.getElementById('desc-custom-count');
+        countEl.textContent = customCount > 0 ? `${customCount} customized` : 'All defaults';
+        countEl.style.color = customCount > 0 ? '#059669' : '#666';
+
+        this.descriptions.forEach(desc => {
+            const item = document.createElement('div');
+            item.className = `desc-item ${desc.is_custom ? 'desc-item-custom' : ''}`;
+            item.dataset.code = desc.code;
+            item.dataset.type = desc.type;
+            item.dataset.isCustom = desc.is_custom;
+
+            item.innerHTML = `
+                <div class="desc-item-header">
+                    <div class="desc-item-title">
+                        <strong>${this.escapeHtml(desc.name)}</strong>
+                        <span class="term-code">${this.escapeHtml(desc.code)}</span>
+                        ${desc.is_custom ? '<span class="desc-badge-custom">Customized</span>' : ''}
+                    </div>
+                    <div class="desc-item-actions">
+                        ${desc.is_custom ? `<button class="btn-reset-desc" data-code="${this.escapeHtml(desc.code)}" title="Reset to default">Reset</button>` : ''}
+                    </div>
+                </div>
+                <div class="desc-item-type">Type: ${this.escapeHtml(desc.type)}</div>
+                ${desc.is_custom ? `<div class="desc-item-default"><em>Default:</em> ${this.escapeHtml(desc.default_description)}</div>` : ''}
+                <textarea class="desc-textarea" data-code="${this.escapeHtml(desc.code)}" rows="2">${this.escapeHtml(desc.description)}</textarea>
+            `;
+
+            container.appendChild(item);
+        });
+
+        // Attach reset handlers
+        container.querySelectorAll('.btn-reset-desc').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const code = e.target.dataset.code;
+                this.resetSingle(code);
+            });
+        });
+
+        // Mark textareas that change from their loaded value
+        container.querySelectorAll('.desc-textarea').forEach(textarea => {
+            const code = textarea.dataset.code;
+            const desc = this.descriptions.find(d => d.code === code);
+            const loadedValue = desc.description;
+
+            textarea.addEventListener('input', () => {
+                if (textarea.value.trim() !== loadedValue) {
+                    textarea.classList.add('desc-textarea-modified');
+                } else {
+                    textarea.classList.remove('desc-textarea-modified');
+                }
+            });
+        });
+    },
+
+    filterDescriptions(searchTerm) {
+        const filterValue = document.getElementById('desc-filter')?.value || 'all';
+        const items = document.querySelectorAll('.desc-item');
+
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            const matchesSearch = !searchTerm || text.includes(searchTerm);
+
+            let matchesFilter = true;
+            switch (filterValue) {
+                case 'custom':
+                    matchesFilter = item.dataset.isCustom === 'true';
+                    break;
+                case 'default':
+                    matchesFilter = item.dataset.isCustom !== 'true';
+                    break;
+            }
+
+            item.style.display = (matchesSearch && matchesFilter) ? '' : 'none';
+        });
+    },
+
+    async saveChanges() {
+        const textareas = document.querySelectorAll('.desc-textarea');
+        const updates = {};
+        const codesToReset = [];
+
+        textareas.forEach(textarea => {
+            const code = textarea.dataset.code;
+            const desc = this.descriptions.find(d => d.code === code);
+            const newValue = textarea.value.trim();
+
+            if (newValue === desc.default_description) {
+                // Changed back to default - reset if it was custom
+                if (desc.is_custom) {
+                    codesToReset.push(code);
+                }
+            } else if (newValue && newValue !== desc.description) {
+                // Different from current - save as custom
+                updates[code] = newValue;
+            }
+        });
+
+        if (Object.keys(updates).length === 0 && codesToReset.length === 0) {
+            alert('No changes to save.');
+            return;
+        }
+
+        try {
+            Utils.showLoading('Saving descriptions...');
+
+            if (codesToReset.length > 0) {
+                await API.resetTermDescriptions(codesToReset);
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await API.updateTermDescriptions(updates);
+            }
+
+            Utils.hideLoading();
+            alert('Term descriptions saved! Changes will apply to future document processing.');
+            this.closeModal();
+        } catch (error) {
+            Utils.hideLoading();
+            alert('Error saving descriptions: ' + error.message);
+        }
+    },
+
+    async resetAll() {
+        if (!confirm('Reset ALL term descriptions to their defaults? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            Utils.showLoading('Resetting descriptions...');
+            await API.resetTermDescriptions();
+            Utils.hideLoading();
+            await this.openModal();
+            alert('All descriptions reset to defaults.');
+        } catch (error) {
+            Utils.hideLoading();
+            alert('Error resetting descriptions: ' + error.message);
+        }
+    },
+
+    async resetSingle(code) {
+        try {
+            await API.resetTermDescriptions([code]);
+            await this.openModal();
+        } catch (error) {
+            alert('Error resetting description: ' + error.message);
+        }
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+};
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     console.log('License Uploader initialized');
@@ -458,6 +708,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize prompt editor
     PromptEditor.init();
+
+    // Initialize term description editor
+    TermDescriptionEditor.init();
 
     // Add smooth scrolling
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {

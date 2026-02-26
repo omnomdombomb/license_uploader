@@ -19,6 +19,7 @@ from config import Config
 from document_parser import DocumentParser
 from llm_extractor import LLMExtractor
 from alma_api import AlmaAPI
+from license_terms_data import LICENSE_TERMS
 
 try:
     import magic
@@ -795,6 +796,115 @@ def reset_prompt():
 
     except Exception as e:
         app.logger.error(f"Error resetting prompt: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# TERM DESCRIPTIONS API
+# ============================================================================
+
+@app.route('/api/term-descriptions', methods=['GET'])
+def get_term_descriptions():
+    """Get all term descriptions (defaults merged with custom overrides)"""
+    try:
+        descriptions = LLMExtractor.get_effective_descriptions()
+        return jsonify({
+            'success': True,
+            'descriptions': descriptions
+        })
+    except Exception as e:
+        app.logger.error(f"Error getting term descriptions: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/term-descriptions', methods=['POST'])
+@limiter.limit("20 per hour")
+def update_term_descriptions():
+    """Update one or more custom term descriptions"""
+    try:
+        data = request.json
+        updates = data.get('descriptions', {})
+
+        if not updates or not isinstance(updates, dict):
+            return jsonify({'success': False, 'error': 'No descriptions provided'}), 400
+
+        # Validate that all codes are valid term codes
+        valid_codes = {t['code'] for t in LICENSE_TERMS}
+        invalid_codes = [c for c in updates.keys() if c not in valid_codes]
+        if invalid_codes:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid term codes: {", ".join(invalid_codes)}'
+            }), 400
+
+        # Validate description values
+        for code, desc in updates.items():
+            if not isinstance(desc, str) or len(desc.strip()) == 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Description for {code} must be a non-empty string'
+                }), 400
+            if len(desc) > 1000:
+                return jsonify({
+                    'success': False,
+                    'error': f'Description for {code} exceeds 1000 character limit'
+                }), 400
+
+        # Merge with existing custom descriptions
+        current = LLMExtractor.load_custom_descriptions()
+        current.update({k: v.strip() for k, v in updates.items()})
+        LLMExtractor.save_custom_descriptions(current)
+
+        app.logger.info(f'Custom term descriptions updated: {list(updates.keys())}')
+        return jsonify({
+            'success': True,
+            'message': f'{len(updates)} description(s) updated'
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error updating term descriptions: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/term-descriptions', methods=['DELETE'])
+@limiter.limit("10 per hour")
+def reset_term_descriptions():
+    """Reset term descriptions. Body can specify individual codes or reset all."""
+    try:
+        data = request.get_json(silent=True) or {}
+        codes_to_reset = data.get('codes', None)
+
+        if codes_to_reset is None:
+            # Reset all - delete the file
+            desc_file = Path(LLMExtractor.CUSTOM_DESCRIPTIONS_FILE)
+            if desc_file.exists():
+                desc_file.unlink()
+            app.logger.info('All custom term descriptions reset to defaults')
+        else:
+            # Reset specific codes
+            if not isinstance(codes_to_reset, list):
+                return jsonify({'success': False, 'error': 'codes must be a list'}), 400
+
+            current = LLMExtractor.load_custom_descriptions()
+            for code in codes_to_reset:
+                current.pop(code, None)
+
+            if current:
+                LLMExtractor.save_custom_descriptions(current)
+            else:
+                desc_file = Path(LLMExtractor.CUSTOM_DESCRIPTIONS_FILE)
+                if desc_file.exists():
+                    desc_file.unlink()
+
+            app.logger.info(f'Custom term descriptions reset: {codes_to_reset}')
+
+        return jsonify({
+            'success': True,
+            'message': 'Description(s) reset to default'
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error resetting term descriptions: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

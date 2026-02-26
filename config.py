@@ -40,7 +40,7 @@ class Config:
 
     # LiteLLM
     LITELLM_API_KEY = os.getenv('LITELLM_API_KEY')
-    LITELLM_BASE_URL = os.getenv('LITELLM_BASE_URL', 'https://ai-gsateway.andrew.cmu.edu')
+    LITELLM_BASE_URL = os.getenv('LITELLM_BASE_URL', 'https://ai-gateway.andrew.cmu.edu')
     LITELLM_MODEL = os.getenv('LITELLM_MODEL', 'gpt-4')
 
     # Rate Limiting
