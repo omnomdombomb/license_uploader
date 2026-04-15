@@ -80,6 +80,31 @@ class LLMExtractor:
         self.close()
 
     @staticmethod
+    def list_available_models(api_key=None, base_url=None, timeout=15):
+        """Query the LiteLLM proxy's /v1/models endpoint for the live model list.
+
+        Returns a sorted list of model IDs. Raises on network/auth errors so
+        the caller can surface a useful message to the UI.
+        """
+        import httpx
+
+        effective_api_key = api_key if api_key is not None else Config.LITELLM_API_KEY
+        effective_base_url = (base_url if base_url is not None else Config.LITELLM_BASE_URL) or ''
+        effective_base_url = effective_base_url.rstrip('/')
+
+        if not effective_api_key or len(str(effective_api_key).strip()) < 10:
+            raise ValueError("LITELLM_API_KEY is required to list models.")
+
+        url = f"{effective_base_url}/v1/models"
+        with httpx.Client(verify=True, timeout=timeout) as client:
+            resp = client.get(url, headers={"Authorization": f"Bearer {effective_api_key}"})
+            resp.raise_for_status()
+            payload = resp.json()
+
+        models = payload.get('data') or []
+        return sorted(m.get('id') for m in models if m.get('id'))
+
+    @staticmethod
     def load_custom_prompt():
         """
         Load custom prompt from file if it exists

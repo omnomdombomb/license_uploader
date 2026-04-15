@@ -26,12 +26,9 @@
                     <div class="api-config-group">
                         <label for="llm-model" class="api-label">Model:</label>
                         <select id="llm-model" class="api-select">
-                            <option value="gpt-5">GPT-5</option>
-                            <option value="gpt-4o">GPT-4o</option>
-                            <option value="gpt-4">GPT-4</option>
-                            <option value="claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                            <option value="claude-3-opus">Claude 3 Opus</option>
+                            <option value="" disabled>Loading models…</option>
                         </select>
+                        <small id="llm-model-status" class="api-hint" style="display:none;"></small>
                     </div>
                     <div class="api-config-group">
                         <button id="edit-prompt-btn" class="btn btn-secondary" title="Edit AI Extraction Prompt" style="margin-top: 0;">

@@ -80,7 +80,7 @@ const APIConfig = {
         }
 
         if (modelSelect) {
-            modelSelect.value = config.llm_model;
+            await this.populateModels(modelSelect, config.llm_model);
             modelSelect.addEventListener('change', async (e) => {
                 await this.saveConfig({
                     litellm_api_key: config.litellm_api_key,
@@ -88,6 +88,72 @@ const APIConfig = {
                     llm_model: e.target.value
                 });
             });
+        }
+    },
+
+    /**
+     * Populate the model <select> from the live LiteLLM /v1/models list.
+     * Falls back to the previously-configured model if the fetch fails.
+     */
+    async populateModels(selectEl, preferredModel) {
+        const statusEl = document.getElementById('llm-model-status');
+        const setStatus = (msg, isError) => {
+            if (!statusEl) return;
+            if (!msg) {
+                statusEl.style.display = 'none';
+                statusEl.textContent = '';
+                return;
+            }
+            statusEl.style.display = '';
+            statusEl.textContent = msg;
+            statusEl.style.color = isError ? '#b00020' : '';
+        };
+
+        try {
+            const resp = await fetch('/api/models', { credentials: 'same-origin' });
+            const data = await resp.json();
+
+            if (!data.success || !Array.isArray(data.models) || data.models.length === 0) {
+                throw new Error(data.error || 'No models returned');
+            }
+
+            const models = data.models;
+            const configured = preferredModel || data.configured_model;
+            const configuredAvailable = configured && models.includes(configured);
+
+            selectEl.innerHTML = '';
+            // If the saved model is gone from the proxy, keep it selectable
+            // so the user notices, but flag it.
+            if (configured && !configuredAvailable) {
+                const opt = document.createElement('option');
+                opt.value = configured;
+                opt.textContent = `${configured} (unavailable)`;
+                selectEl.appendChild(opt);
+            }
+            for (const id of models) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = id;
+                selectEl.appendChild(opt);
+            }
+
+            selectEl.value = configured || models[0];
+
+            if (configured && !configuredAvailable) {
+                setStatus(`⚠ Model "${configured}" is no longer available on the gateway. Pick a new one.`, true);
+            } else {
+                setStatus('', false);
+            }
+        } catch (err) {
+            console.error('Failed to load model list:', err);
+            // Fallback: keep the saved value so the app still works
+            selectEl.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = preferredModel || 'gpt-5';
+            opt.textContent = opt.value;
+            selectEl.appendChild(opt);
+            selectEl.value = opt.value;
+            setStatus('Could not load models from LiteLLM — using saved value.', true);
         }
     }
 };

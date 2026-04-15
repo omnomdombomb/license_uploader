@@ -284,6 +284,29 @@ def health_check():
     })
 
 
+@app.route('/api/models', methods=['GET'])
+def list_models():
+    """Return the live list of models available from the LiteLLM proxy.
+
+    Uses the session-saved LiteLLM key if present, otherwise falls back to
+    the env-configured key. Keeps the UI in sync when models are renamed.
+    """
+    try:
+        session_cfg = session.get('api_config', {}) or {}
+        api_key = session_cfg.get('litellm_api_key') or Config.LITELLM_API_KEY
+        models = LLMExtractor.list_available_models(api_key=api_key)
+        configured = session_cfg.get('llm_model') or Config.LITELLM_MODEL
+        return jsonify({
+            'success': True,
+            'models': models,
+            'configured_model': configured,
+            'configured_model_available': configured in models,
+        })
+    except Exception as e:
+        app.logger.warning(f"Failed to list models from LiteLLM: {e}")
+        return jsonify({'success': False, 'error': str(e), 'models': []}), 502
+
+
 @app.route('/api/csrf-token', methods=['GET'])
 def get_csrf_token():
     """
