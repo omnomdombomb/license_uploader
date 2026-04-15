@@ -60,11 +60,25 @@ const APIConfig = {
         if (litellmInput) {
             litellmInput.value = config.litellm_api_key;
             litellmInput.addEventListener('change', async (e) => {
+                config.litellm_api_key = e.target.value;
                 await this.saveConfig({
-                    litellm_api_key: e.target.value,
+                    litellm_api_key: config.litellm_api_key,
                     alma_api_key: config.alma_api_key,
                     llm_model: config.llm_model
                 });
+                // Re-populate the model dropdown against the new key —
+                // different team keys see different models.
+                if (modelSelect) {
+                    const chosen = await this.populateModels(modelSelect, config.llm_model);
+                    if (chosen && chosen !== config.llm_model) {
+                        config.llm_model = chosen;
+                        await this.saveConfig({
+                            litellm_api_key: config.litellm_api_key,
+                            alma_api_key: config.alma_api_key,
+                            llm_model: config.llm_model
+                        });
+                    }
+                }
             });
         }
 

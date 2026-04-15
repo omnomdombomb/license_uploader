@@ -263,6 +263,19 @@ def validate_session_file_path(session_file_path):
         raise ValueError(f"Invalid session file path: {str(e)}")
 
 
+@app.context_processor
+def inject_asset_version():
+    """Expose a static-asset cache-buster based on main.js mtime.
+
+    Prevents stale JS on clients (e.g. iOS Safari) after deploys.
+    """
+    try:
+        mtime = int(Path(app.static_folder, 'js', 'main.js').stat().st_mtime)
+    except Exception:
+        mtime = 0
+    return {'asset_version': mtime}
+
+
 @app.route('/')
 def index():
     """Home page"""
