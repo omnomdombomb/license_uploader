@@ -80,7 +80,17 @@ const APIConfig = {
         }
 
         if (modelSelect) {
-            await this.populateModels(modelSelect, config.llm_model);
+            const chosen = await this.populateModels(modelSelect, config.llm_model);
+            // If populateModels auto-switched (saved model was unavailable),
+            // persist the new selection immediately so extraction uses it.
+            if (chosen && chosen !== config.llm_model) {
+                await this.saveConfig({
+                    litellm_api_key: config.litellm_api_key,
+                    alma_api_key: config.alma_api_key,
+                    llm_model: chosen
+                });
+                config.llm_model = chosen;
+            }
             modelSelect.addEventListener('change', async (e) => {
                 await this.saveConfig({
                     litellm_api_key: config.litellm_api_key,
@@ -122,14 +132,6 @@ const APIConfig = {
             const configuredAvailable = configured && models.includes(configured);
 
             selectEl.innerHTML = '';
-            // If the saved model is gone from the proxy, keep it selectable
-            // so the user notices, but flag it.
-            if (configured && !configuredAvailable) {
-                const opt = document.createElement('option');
-                opt.value = configured;
-                opt.textContent = `${configured} (unavailable)`;
-                selectEl.appendChild(opt);
-            }
             for (const id of models) {
                 const opt = document.createElement('option');
                 opt.value = id;
@@ -137,13 +139,18 @@ const APIConfig = {
                 selectEl.appendChild(opt);
             }
 
-            selectEl.value = configured || models[0];
+            // If the saved model is no longer available, auto-switch to the
+            // first available one. Keeping it selected just reproduces the
+            // upstream 401 every upload.
+            const finalValue = configuredAvailable ? configured : models[0];
+            selectEl.value = finalValue;
 
             if (configured && !configuredAvailable) {
-                setStatus(`⚠ Model "${configured}" is no longer available on the gateway. Pick a new one.`, true);
+                setStatus(`⚠ Saved model "${configured}" is no longer available on the gateway. Switched to "${finalValue}".`, true);
             } else {
                 setStatus('', false);
             }
+            return finalValue;
         } catch (err) {
             console.error('Failed to load model list:', err);
             // Fallback: keep the saved value so the app still works
@@ -154,6 +161,7 @@ const APIConfig = {
             selectEl.appendChild(opt);
             selectEl.value = opt.value;
             setStatus('Could not load models from LiteLLM — using saved value.', true);
+            return opt.value;
         }
     }
 };
