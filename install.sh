@@ -102,10 +102,25 @@ echo ""
 # Create logs directory
 mkdir -p logs
 
-# Make START_HERE.sh executable
+# Make launchers executable
 if [ -f START_HERE.sh ]; then
     chmod +x START_HERE.sh
     echo "✓ Made START_HERE.sh executable"
+fi
+if [ -f START_HERE.command ]; then
+    chmod +x START_HERE.command
+    echo "✓ Made START_HERE.command executable"
+fi
+if [ -f install.command ]; then
+    chmod +x install.command
+fi
+
+# On macOS, tell the user to use .command files
+if [ "$(uname)" = "Darwin" ]; then
+    echo ""
+    echo "macOS detected:"
+    echo "  Double-click START_HERE.command to launch (not START_HERE.sh)."
+    echo "  Finder opens .sh files in a text editor; .command files run in Terminal."
 fi
 
 echo ""
@@ -118,7 +133,11 @@ echo "1. Edit .env file and add your API keys:"
 echo "   nano .env  (or use your preferred editor)"
 echo ""
 echo "2. Run the application:"
-echo "   ./START_HERE.sh"
+if [ "$(uname)" = "Darwin" ]; then
+    echo "   Double-click START_HERE.command  (or run: ./START_HERE.command)"
+else
+    echo "   ./START_HERE.sh"
+fi
 echo ""
 echo "For troubleshooting, see: docs/TROUBLESHOOTING_GUIDE.md"
 echo ""

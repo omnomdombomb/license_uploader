@@ -10,7 +10,10 @@ AI-powered license term extraction and upload to Ex Libris Alma.
 
 **New Users (Easiest):**
 1. Read **[GET_STARTED.md](GET_STARTED.md)**
-2. Double-click `START_HERE.bat` (Windows) or `START_HERE.sh` (Mac/Linux)
+2. Double-click the launcher for your OS:
+   - **Windows** → `START_HERE.bat`
+   - **macOS** → `START_HERE.command` (not `.sh` — Finder opens `.sh` in a text editor)
+   - **Linux** → `START_HERE.sh`
 3. Browser opens automatically - start uploading!
 
 **Need More Help?**

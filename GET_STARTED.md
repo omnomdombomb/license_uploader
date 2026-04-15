@@ -45,7 +45,10 @@ pip install -r requirements.txt
 **Easiest way:**
 
 - **Windows:** Double-click `START_HERE.bat`
-- **Mac/Linux:** Double-click `START_HERE.sh`
+- **macOS:** Double-click `START_HERE.command`
+- **Linux:** Double-click `START_HERE.sh` (or run `./START_HERE.sh`)
+
+> **macOS note:** Use the `.command` file, **not** `START_HERE.sh`. Finder opens `.sh` files in a text editor on double-click — only `.command` files launch in Terminal. If Gatekeeper blocks it the first time, right-click → Open → Open.
 
 **Alternative (command line):**
 ```bash
@@ -82,7 +85,7 @@ Done! No manual data entry needed.
 - Right-click `START_HERE.bat` → "Create shortcut" → Drag to Desktop
 
 **Mac:**
-- Hold Option+Command, drag `START_HERE.sh` to Desktop
+- Hold Option+Command, drag `START_HERE.command` to Desktop
 
 **Linux:**
 ```bash
@@ -130,4 +133,7 @@ Copy `http://localhost:5000` from the launcher window and paste into your browse
 
 ---
 
-**That's it! Double-click START_HERE to begin.** 🎉
+**That's it! Double-click the right START_HERE for your OS to begin.** 🎉
+- Windows → `START_HERE.bat`
+- macOS → `START_HERE.command`
+- Linux → `START_HERE.sh`

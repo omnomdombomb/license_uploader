@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.platform_utils import (
     get_venv_python,
     find_python_executable,
-    check_tkinter_available,
     get_platform_name
 )
 from utils.port_utils import (
@@ -195,42 +194,6 @@ def wait_for_server(port: int, timeout: int = 10) -> bool:
     return False
 
 
-def launch_gui_mode():
-    """
-    Launch in GUI mode using Tkinter
-
-    Returns:
-        True if GUI launched successfully, False otherwise
-    """
-    try:
-        import tkinter as tk
-        from tkinter import scrolledtext, messagebox
-
-        print_colored("🖥️  Launching GUI mode...", Fore.CYAN)
-
-        # Basic GUI implementation
-        root = tk.Tk()
-        root.title("License Uploader Launcher")
-        root.geometry("600x400")
-
-        # Simple message for now
-        label = tk.Label(
-            root,
-            text="GUI mode is launching...\nCheck console for details.",
-            font=("Arial", 12)
-        )
-        label.pack(pady=50)
-
-        # Note: Full GUI implementation would go here
-        # For now, we'll skip GUI and use CLI mode
-        root.destroy()
-        return False
-
-    except Exception as e:
-        print_colored(f"⚠️  GUI mode failed: {e}", Fore.YELLOW)
-        return False
-
-
 def launch_cli_mode(port: int):
     """
     Launch in CLI mode
@@ -290,7 +253,6 @@ def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='License Uploader Launcher')
     parser.add_argument('--port', type=int, default=5000, help='Port to run on (default: 5000)')
-    parser.add_argument('--no-gui', action='store_true', help='Force CLI mode (skip GUI)')
     parser.add_argument('--no-browser', action='store_true', help='Do not open browser automatically')
     args = parser.parse_args()
 
@@ -329,16 +291,8 @@ def main():
             input("\nPress Enter to exit...")
             return 1
 
-        # Try GUI mode if available and not disabled
-        gui_launched = False
-        if not args.no_gui and check_tkinter_available():
-            gui_launched = launch_gui_mode()
-
-        # Fall back to CLI mode
-        if not gui_launched:
-            print_colored("📟 Running in CLI mode", Fore.CYAN)
-            if not args.no_browser:
-                launch_cli_mode(port)
+        if not args.no_browser:
+            launch_cli_mode(port)
 
         # Run server loop
         run_server_loop(process)

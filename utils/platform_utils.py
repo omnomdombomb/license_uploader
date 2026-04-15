@@ -99,19 +99,3 @@ def find_python_executable() -> Optional[Path]:
     return None
 
 
-def check_tkinter_available() -> bool:
-    """
-    Check if Tkinter (GUI) is available
-
-    Returns:
-        True if Tkinter can be imported, False otherwise
-    """
-    try:
-        import tkinter
-        # Try to create a root window to verify it works
-        root = tkinter.Tk()
-        root.withdraw()
-        root.destroy()
-        return True
-    except (ImportError, Exception):
-        return False
